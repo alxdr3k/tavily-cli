@@ -1,7 +1,7 @@
 [project]
 name = "web-search-client"
 version = "0.1.0"
-description = "Command-line web search client using Tavily API with result storage and management"
+description = "Command-line web search client using Tavily API with file and Redis-based result storage"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"
@@ -33,14 +33,17 @@ dev = [
     "pytest>=8.3.5",
     "pytest-cov>=6.1.1",
 ]
+redis = [
+    "redis>=5.0.0",
+]
 
 [tool.setuptools]
 packages = ["search_client"]
 include-package-data = false
 
 [project.urls]
-"Homepage" = "https://github.com/yourusername/web-search-client"
-"Bug Tracker" = "https://github.com/yourusername/web-search-client/issues"
+"Homepage" = "https://github.com/alxdr3k/web-search-client"
+"Bug Tracker" = "https://github.com/alxdr3k/web-search-client/issues"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
