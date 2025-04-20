@@ -11,18 +11,30 @@ from search_client.search import SearchError, run_search
 from search_client.storage import cleanup, save_results
 
 
-@click.group()
+@click.command()
 @click.version_option(version=__version__)
-def cli():
-    """Web Search Client using Tavily API.
-    
-    Search the web and save results to local files.
-    """
-    pass
-
-
-@cli.command()
-@click.argument("query", required=True)
+@click.argument("query", required=False)
+@click.option(
+    "--clean", 
+    is_flag=True, 
+    help="Clean up search result files older than the specified days (default: 14 days)"
+)
+@click.option(
+    "--days", 
+    type=int, 
+    default=14, 
+    help="Number of days to keep files when using --clean (older results will be deleted, default: 14)"
+)
+@click.option(
+    "--all", 
+    is_flag=True, 
+    help="When used with --clean, removes ALL search results regardless of age"
+)
+@click.option(
+    "--force", 
+    is_flag=True, 
+    help="Force cleanup without confirmation when using --clean"
+)
 @click.option(
     "--max-results", "-n", 
     default=10, 
@@ -30,9 +42,9 @@ def cli():
 )
 @click.option(
     "--depth", "-d", 
-    type=click.Choice(["basic", "advanced"]), 
-    default="advanced",
-    help="Search depth (basic is faster, advanced is more thorough)"
+    type=click.Choice(["basic", "comprehensive"]), 
+    default="basic",
+    help="Search depth (basic is faster, comprehensive is more thorough)"
 )
 @click.option(
     "--raw/--no-raw", 
@@ -60,8 +72,12 @@ def cli():
     default="advanced",
     help="Include an AI-generated answer in results (default: advanced)"
 )
-def search(
-    query: str,
+def cli(
+    query: Optional[str],
+    clean: bool,
+    days: int,
+    all: bool,
+    force: bool,
     max_results: int,
     depth: str,
     raw: bool,
@@ -70,7 +86,9 @@ def search(
     retention_days: int,
     include_answer: str,
 ):
-    """Search the web and save results to a local file.
+    """Web Search Client using Tavily API.
+    
+    Search the web and save results to local files.
     
     QUERY: The search query string
     
@@ -80,7 +98,42 @@ def search(
     - 'advanced': A more detailed answer (default)
     """
     try:
-        # First clean up old results
+        # Handle 'all' flag used without 'clean'
+        if all and not clean:
+            click.echo("Error: The --all flag can only be used with --clean.", err=True)
+            click.echo("Use --help to see usage information.", err=True)
+            sys.exit(1)
+
+        # Handle cleanup mode
+        if clean:
+            # If 'all' flag is set, override days to 0 (clean everything)
+            if all:
+                days = 0
+                confirmation_msg = "This will permanently delete ALL cached search results. Continue?"
+            else:
+                confirmation_msg = f"Clean up search result files older than {days} days?"
+
+            if not force:
+                confirm = click.confirm(confirmation_msg)
+                if not confirm:
+                    click.echo("Cleanup cancelled.")
+                    return
+            
+            deleted_count = cleanup(days=days)
+            
+            if all:
+                click.echo(f"Cleaned up {deleted_count} result file(s)")
+            else:
+                click.echo(f"Cleaned up {deleted_count} result file(s) older than {days} days")
+            return
+
+        # Ensure query is provided for search mode
+        if query is None:
+            click.echo("Error: Missing argument 'QUERY'.", err=True)
+            click.echo("Use --help to see usage information.", err=True)
+            sys.exit(1)
+            
+        # For search mode, first clean up old results
         cleanup(days=retention_days)
         
         # Run the search
