@@ -90,16 +90,16 @@ web-search --retention-days 30 "renewable energy technology"
 ```
 
 ### Manual Cleanup
-
 ```bash
 # Clean up search result files older than the default 14 days
-web-search clean
+web-search --clean
 
 # Clean up files older than a specific number of days
-web-search clean --days 7
+web-search --clean --days 7
 
 # Force cleanup without confirmation
-web-search clean --force
+web-search --clean --force
+```
 ```
 
 ### Help Information
@@ -107,9 +107,6 @@ web-search clean --force
 ```bash
 # Display general help
 web-search --help
-
-# Display help for a specific command
-web-search search --help
 ```
 
 ## File Storage
@@ -271,16 +268,16 @@ The Redis integration also supports listing, retrieving, and deleting specific r
 
 ```bash
 # List saved results in Redis
-web-search list --storage redis
+web-search --list --storage redis
 
 # Get a specific result
-web-search get --storage redis 20250420-120145_quantum-computing
+web-search --get 20250420-120145_quantum-computing --storage redis
 
 # Delete a specific result
-web-search delete --storage redis 20250420-120145_quantum-computing
+web-search --delete 20250420-120145_quantum-computing --storage redis
 
 # Clean up old results
-web-search clean --storage redis --days 7
+web-search --clean --storage redis --days 7
 ```
 
 These commands will be available in a future update. For now, you can examine the implementation in the `search_client/storage/redis.py` file.
