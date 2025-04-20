@@ -9,16 +9,28 @@ services:
       STORAGE_BACKEND: "redis"  # force Redis storage only
       REDIS_HOST: redis
       REDIS_PORT: 6379
+      IN_DOCKER: "true"  # Signal application it's running in Docker
+      # REDIS_PASSWORD: "${REDIS_PASSWORD}"  # Uncomment if using password
+      # REDIS_SSL: "false"  # Uncomment if using SSL
+    ports:
+      - "5001:5000"  # Expose container port 5000 as 5001 on host
     depends_on:
       - redis
 
   redis:
     image: redis:7-alpine
     command: ["redis-server", "--appendonly", "yes"]  # enable persistence
+    # Uncomment to add password protection
+    # command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD}"]
     volumes:
       - redis-data:/data  # persist Redis data
     ports:
       - "16379:6379"  # expose Redis port 6379 as 16379 on host
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
 
 volumes:
   redis-data:  # named volume for Redis data

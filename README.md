@@ -169,6 +169,7 @@ The web search client supports Redis as an alternative storage backend for searc
 - **Sharing**: Multiple clients can access the same result store
 - **Data Management**: Better query and filtering capabilities
 - **TTL Support**: Native expiration of old results
+- **Resilience**: Automatic fallback to mock implementation if Redis is unavailable
 
 ### Installing Redis Support
 
@@ -182,11 +183,60 @@ uv pip install -e ".[redis]"
 pip install "web-search-client[redis]"
 ```
 
-You'll also need access to a Redis server. For local development, you can run Redis using Docker:
+### Redis Configuration
+
+#### Environment Variables
+
+The Redis connection can be configured using environment variables:
 
 ```bash
-docker run -d -p 6379:6379 --name redis redis:latest
+# Set environment variables directly
+export REDIS_HOST=localhost
+export REDIS_PORT=16379
+export REDIS_PASSWORD=mypassword  # Optional
+export REDIS_SSL=false            # Optional, set to true for SSL connections
 ```
+
+Or by creating/updating a `.env` file:
+
+```
+# Redis Configuration
+REDIS_HOST=localhost
+REDIS_PORT=16379
+#REDIS_PASSWORD=mypassword
+#REDIS_SSL=false
+```
+
+#### Configuration for Local Development
+
+For local development, the default configuration will try to connect to Redis at `localhost:16379`. You can run Redis locally using:
+
+```bash
+# Install Redis on your system, or use Docker:
+docker run -d -p 16379:6379 --name redis redis:7-alpine
+```
+
+### Using Docker for Redis
+
+We provide a Docker Compose configuration for running both the application and Redis:
+
+```bash
+# Start the services
+docker-compose up -d
+
+# Stop the services
+docker-compose down
+
+# Remove volumes (will delete all stored data)
+docker-compose down -v
+```
+
+The Docker Compose setup:
+
+1. Runs Redis with data persistence enabled
+2. Maps Redis port 6379 to host port 16379
+3. Sets up the application with proper environment variables
+4. Automatically detects the Docker environment to use the correct port
 
 ### Using Redis Storage
 
@@ -209,7 +259,7 @@ The following options are available for Redis configuration:
 
 - `--storage redis`: Use Redis as the storage backend
 - `--redis-host TEXT`: Redis server hostname (default: localhost)
-- `--redis-port INTEGER`: Redis server port (default: 6379)
+- `--redis-port INTEGER`: Redis server port (default: 16379 for local, 6379 in Docker)
 - `--redis-db INTEGER`: Redis database number (default: 0)
 - `--redis-password TEXT`: Redis password if authentication is required
 - `--redis-prefix TEXT`: Key prefix for Redis keys (default: web-search:)
@@ -234,3 +284,39 @@ web-search clean --storage redis --days 7
 ```
 
 These commands will be available in a future update. For now, you can examine the implementation in the `search_client/storage/redis.py` file.
+
+### Troubleshooting Redis Connectivity
+
+If you experience issues with Redis connectivity:
+
+1. **Check Redis Server**: Ensure Redis is running and accessible
+   ```bash
+   # For local Redis
+   redis-cli -p 16379 ping
+   
+   # For Docker Redis
+   docker exec -it web-search-client-redis-1 redis-cli ping
+   ```
+
+2. **Verify Environment Variables**: Make sure REDIS_HOST and REDIS_PORT are correctly set
+   ```bash
+   echo $REDIS_HOST
+   echo $REDIS_PORT
+   ```
+
+3. **Port Mapping**: If using Docker, verify the port mappings are correct
+   ```bash
+   docker ps | grep redis
+   ```
+
+4. **Application Logs**: Check the logs for Redis connection information
+   ```bash
+   # The application will log the Redis connection details:
+   # "Initialized Redis storage backend at localhost:16379 with prefix: web-search:"
+   ```
+
+5. **Fallback Behavior**: If Redis is unavailable, the application will automatically fall back to a mock Redis implementation and log:
+   ```
+   "Failed to connect to Redis at localhost:16379: Error connecting to Redis"
+   "Falling back to mock Redis implementation"
+   ```

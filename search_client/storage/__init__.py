@@ -28,10 +28,34 @@ def get_storage_backend(backend_type: str = "redis", **kwargs):
     Returns:
         An initialized Redis storage backend instance
     """
-    # Set default Redis port if not specified
-    if 'port' not in kwargs:
-        kwargs['port'] = 16379
-        
+    # Check environment variables first
+    host = os.environ.get("REDIS_HOST", kwargs.get('host', 'localhost'))
+    
+    # Handle port configuration with Docker awareness
+    in_docker = os.environ.get("IN_DOCKER", "").lower() == "true"
+    env_port = os.environ.get("REDIS_PORT")
+    
+    if env_port:
+        port = int(env_port)
+    elif in_docker and 'port' not in kwargs:
+        # In Docker, use the container port (6379)
+        port = 6379
+    elif 'port' not in kwargs:
+        # Default to host port when not in Docker
+        port = 16379
+    else:
+        port = kwargs.get('port')
+    
+    # Handle other Redis parameters
+    password = os.environ.get("REDIS_PASSWORD", kwargs.get('password'))
+    ssl = kwargs.get('ssl', False)
+    
+    # Set updated values in kwargs
+    kwargs['host'] = host
+    kwargs['port'] = port
+    if password:
+        kwargs['password'] = password
+    
     # Always return Redis storage backend regardless of the backend_type
     return RedisStorageBackend(**kwargs)
 
@@ -44,10 +68,8 @@ def _get_redis_backend():
     """
     global _redis_backend
     if _redis_backend is None:
-        # Initialize with environment variables if available
-        host = os.environ.get("REDIS_HOST", "localhost")
-        port = int(os.environ.get("REDIS_PORT", "16379"))
-        _redis_backend = RedisStorageBackend(host=host, port=port)
+        # Use the factory function to ensure consistent configuration
+        _redis_backend = get_storage_backend()
     return _redis_backend
 
 

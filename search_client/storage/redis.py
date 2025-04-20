@@ -83,11 +83,12 @@ class RedisStorageBackend(StorageBackend):
     def __init__(
         self, 
         host: str = "localhost", 
-        port: int = 6379,
+        port: int = 16379,
         db: int = 0,
         password: Optional[str] = None,
         prefix: str = "web-search:",
-        ttl_days: int = 14
+        ttl_days: int = 14,
+        ssl: bool = False
     ):
         """Initialize the Redis storage backend.
         
@@ -98,19 +99,50 @@ class RedisStorageBackend(StorageBackend):
             password: Redis password if authentication is required
             prefix: Key prefix for Redis keys
             ttl_days: Default TTL for keys in days
+            ssl: Whether to use SSL for Redis connection
         """
-        # Using real Redis client
-        self.redis_client = redis.Redis(
-            host=host, port=port, db=db,
-            decode_responses=True
-        )
+        # Initialize with environment variables if available
+        host = os.environ.get("REDIS_HOST", host)
         
-        # No longer using mock Redis
-        # self.redis_client = MockRedisClient()
+        # Check if running inside Docker to use the correct port
+        in_docker = os.environ.get("IN_DOCKER", "").lower() == "true"
+        env_port = os.environ.get("REDIS_PORT")
+        if env_port:
+            port = int(env_port)
+        elif in_docker:
+            # If in Docker, use the container port (6379)
+            port = 6379
+        
+        # Get password from environment if available
+        env_password = os.environ.get("REDIS_PASSWORD")
+        if env_password:
+            password = env_password
+            
+        # Using real Redis client with proper parameters
+        try:
+            self.redis_client = redis.Redis(
+                host=host, 
+                port=port, 
+                db=db,
+                password=password,
+                ssl=ssl,
+                decode_responses=True
+            )
+            
+            # Test connection
+            self.redis_client.ping()
+            is_mock = False
+            logger.info(f"Initialized Redis storage backend at {host}:{port} with prefix: {prefix}")
+        except redis.exceptions.RedisError as e:
+            logger.warning(f"Failed to connect to Redis at {host}:{port}: {e}")
+            logger.warning("Falling back to mock Redis implementation")
+            self.redis_client = MockRedisClient()
+            is_mock = True
+            logger.info(f"Initialized Mock Redis storage backend with prefix: {prefix}")
+        
         self.prefix = prefix
         self.ttl_days = ttl_days
-        
-        logger.info(f"Initialized Redis storage backend (mock) with prefix: {prefix}")
+        self.is_mock = is_mock
         
     def _make_key(self, key_type: str, identifier: str) -> str:
         """Create a Redis key with the configured prefix."""
@@ -148,33 +180,41 @@ class RedisStorageBackend(StorageBackend):
             
             # Save to Redis
             result_key = self._make_key("result", identifier)
-            self.redis_client.set(
-                result_key, 
-                json.dumps(results_with_metadata)
-            )
-            
-            # Set expiration
-            if self.ttl_days > 0:
-                seconds = self.ttl_days * 24 * 60 * 60
-                self.redis_client.expire(result_key, seconds)
+            try:
+                self.redis_client.set(
+                    result_key, 
+                    json.dumps(results_with_metadata)
+                )
                 
-            # Add to index
-            index_key = self._make_key("index", "all")
-            self.redis_client.zadd(
-                index_key,
-                {identifier: time.time()}
-            )
-            
-            # Add to query index
-            query_key = self._make_key("query", self._slugify(query))
-            self.redis_client.zadd(
-                query_key,
-                {identifier: time.time()}
-            )
-            
-            logger.info(f"Results saved to Redis with ID: {identifier}")
-            return identifier
-            
+                # Set expiration
+                if self.ttl_days > 0:
+                    seconds = self.ttl_days * 24 * 60 * 60
+                    self.redis_client.expire(result_key, seconds)
+                    
+                # Add to index
+                index_key = self._make_key("index", "all")
+                self.redis_client.zadd(
+                    index_key,
+                    {identifier: time.time()}
+                )
+                
+                # Add to query index
+                query_key = self._make_key("query", self._slugify(query))
+                self.redis_client.zadd(
+                    query_key,
+                    {identifier: time.time()}
+                )
+                
+                logger.info(f"Results saved to Redis with ID: {identifier}")
+                return identifier
+                
+            except redis.exceptions.RedisError as re:
+                logger.error(f"Redis operation error: {re}")
+                # If using mock, the error is not from connection
+                if not self.is_mock:
+                    logger.error(f"Check Redis connection settings (host: {os.environ.get('REDIS_HOST', 'localhost')}, port: {os.environ.get('REDIS_PORT', '16379')})")
+                raise StorageError(f"Failed to perform Redis operation: {re}")
+                
         except Exception as e:
             logger.error(f"Redis error: {e}")
             raise StorageError(f"Failed to save results to Redis: {e}")
