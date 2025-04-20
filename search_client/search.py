@@ -2,7 +2,7 @@
 
 import os
 import sys
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, Union
 
 import httpx
 from dotenv import load_dotenv
@@ -40,21 +40,25 @@ def validate_api_key() -> None:
 
 def get_cached_results(
     query: str,
-    search_depth: str = "basic",
-    max_results: int = 10,
-    include_raw: bool = False,
-    include_domains: Optional[List[str]] = None,
-    exclude_domains: Optional[List[str]] = None,
+    search_depth: str,
+    max_results: int,
+    include_raw: bool ,
+    include_domains: Optional[List[str]],
+    exclude_domains: Optional[List[str]],
+    include_answer: Union[bool, str],
 ) -> Tuple[bool, Optional[Dict[str, Any]]]:
     """Check if results for this query are already cached in Redis.
     
     Args:
         query: The search query string
-        search_depth: Search depth, either "basic" or "comprehensive"
+        search_depth: Search depth, either "basic" or "advanced"
         max_results: Maximum number of results to return
         include_raw: Whether to include raw content in results
         include_domains: Optional list of domains to include in search
         exclude_domains: Optional list of domains to exclude from search
+        include_answer: Whether to include an AI-generated answer in results.
+                        "false": No answer, "basic": Quick answer, 
+                        "advanced": Detailed answer
         
     Returns:
         Tuple of (found, results), where found is a boolean indicating if
@@ -90,21 +94,25 @@ def get_cached_results(
 
 def run_search(
     query: str, 
-    max_results: int = 10, 
-    search_depth: str = "basic",
-    include_raw: bool = False,
-    include_domains: Optional[List[str]] = None,
-    exclude_domains: Optional[List[str]] = None,
+    max_results: int, 
+    search_depth: str,
+    include_raw: bool,
+    include_domains: Optional[List[str]],
+    exclude_domains: Optional[List[str]],
+    include_answer: Union[bool, str],
 ) -> Dict[str, Any]:
     """Run a web search using Tavily API.
     
     Args:
         query: The search query string
-        max_results: Maximum number of results to return (default: 10)
-        search_depth: Search depth, either "basic" or "comprehensive" (default: "basic")
-        include_raw: Whether to include raw content in results (default: False)
+        max_results: Maximum number of results to return
+        search_depth: Search depth, either "basic" or "advanced"
+        include_raw: Whether to include raw content in results
         include_domains: Optional list of domains to include in search
         exclude_domains: Optional list of domains to exclude from search
+        include_answer: Whether to include an AI-generated answer in results.
+                        False: No answer, "basic": Quick answer, 
+                        "advanced": Detailed answer
         
     Returns:
         List of search result dictionaries
@@ -123,7 +131,8 @@ def run_search(
             max_results=max_results,
             include_raw=include_raw,
             include_domains=include_domains,
-            exclude_domains=exclude_domains
+            exclude_domains=exclude_domains,
+            include_answer=include_answer
         )
         
         # If found in cache, return cached results
@@ -143,6 +152,7 @@ def run_search(
             "max_results": max_results,
             "search_depth": search_depth,
             "include_raw_content": include_raw,
+            "include_answer": include_answer,
         }
         
         # Add optional domain filters if provided
@@ -151,7 +161,6 @@ def run_search(
         if exclude_domains:
             search_params["exclude_domains"] = exclude_domains
             
-        # Execute search
         # Execute search
         response = client.search(**search_params)
         # Extract and return results
