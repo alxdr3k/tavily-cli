@@ -20,11 +20,16 @@ A command-line client that uses the [Tavily API](https://tavily.com/) to perform
 
 ### Prerequisites
 
+#### Local Installation
 - Python 3.12 or higher
 - [uv](https://github.com/astral-sh/uv) - Fast Python package installer and resolver
 - [Tavily API key](https://tavily.com/) (sign up for free to get one)
 
-### Clone and Install Locally
+#### Docker Compose Installation
+- Docker and Docker Compose installed on your system
+- [Tavily API key](https://tavily.com/) (sign up for free to get one)
+
+### Local Installation
 
 ```bash
 # Clone the repository
@@ -42,7 +47,19 @@ source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 uv pip install -e .
 ```
 
+### Docker Compose Installation
+
+```bash
+# Clone the repository
+git clone https://github.com/alxdr3k/tavily-cli.git
+cd tavily-cli
+
+# Build Docker containers
+docker compose build
+```
 ## ⚙️ Configuration
+
+### Local Configuration
 
 Create a `.env` file in your project directory with your Tavily API key:
 
@@ -56,7 +73,23 @@ Alternatively, set it as an environment variable:
 export TAVILY_API_KEY=your_api_key_here
 ```
 
-## 📖 Basic Usage
+### Docker Compose Configuration
+
+Create a `.env` file in your project directory with your Tavily API key and optional Redis settings:
+
+```
+TAVILY_API_KEY=your_api_key_here
+# Optional: REDIS_PASSWORD=your_redis_password
+```
+
+The Docker Compose setup automatically configures:
+- A Tavily CLI container with the application
+- A Redis container with persistence enabled
+- Proper networking between containers
+- Port mappings (5001 for the app, 16379 for Redis)
+## 📖 Usage
+
+### Local Usage
 
 ```bash
 # Simple search
@@ -87,6 +120,68 @@ tavily --clean --force           # Skip confirmation prompt
 
 # Display help information
 tavily --help
+```
+
+### Docker Compose Usage
+
+Start the containers:
+
+```bash
+# Start in detached mode
+docker compose up -d
+
+# View logs
+docker compose logs -f
+```
+
+Run commands in the running container:
+
+```bash
+# Simple search
+docker compose exec tavily-cli tavily "python programming tutorials"
+
+# Limit number of results 
+docker compose exec tavily-cli tavily --max-results 5 "machine learning frameworks"
+
+# Advanced search options
+docker compose exec tavily-cli tavily --depth advanced "climate change solutions"
+
+# Cleanup old results
+docker compose exec tavily-cli tavily --clean --force
+```
+
+Run one-off commands (creates a temporary container):
+
+```bash
+# Run a search directly 
+docker compose run --rm tavily-cli tavily "quantum computing"
+```
+
+Stop containers:
+
+```bash
+# Stop containers but keep volumes
+docker compose down
+
+# Stop containers and remove volumes (will delete stored search results)
+docker compose down -v
+```
+
+Troubleshooting Docker setup:
+
+```bash
+# Check if containers are running
+docker compose ps
+
+# Check container logs
+docker compose logs tavily-cli
+docker compose logs redis
+
+# Test Redis connection inside container
+docker compose exec redis redis-cli ping
+
+# Rebuild containers after changes
+docker compose up -d --build
 ```
 
 ## 🧪 Development Setup
