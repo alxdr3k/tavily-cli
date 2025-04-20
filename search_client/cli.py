@@ -4,6 +4,7 @@ import sys
 from typing import List, Optional
 
 import click
+from click.exceptions import Abort
 
 from search_client import __version__
 from search_client.logger import logger
@@ -138,6 +139,9 @@ def clean(days: int, force: bool):
         deleted = cleanup(days=days)
         click.echo(f"Cleaned up {deleted} old result file(s).")
         
+    except Abort:
+        # Let Click handle the abort case naturally
+        raise
     except Exception as e:
         logger.error(f"Error cleaning up files: {e}")
         click.echo(f"Error: {e}", err=True)
