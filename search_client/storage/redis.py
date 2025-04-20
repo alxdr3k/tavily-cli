@@ -1,34 +1,39 @@
 """Redis storage backend for web search client."""
 
 import json
+import logging
+import os
 import time
 from datetime import datetime, timedelta
-from typing import Dict, Any, Optional, List
+from typing import Any, Dict, List, Optional, Tuple
+
+# Import real Redis
+import redis
 
 from search_client.logger import logger
 from search_client.storage.base import StorageBackend, StorageError
 
-
+# Mock Redis implementation - kept for reference but not used
 class MockRedisClient:
-    """Mock Redis client for demonstration purposes.
-    
-    In a real implementation, this would be replaced with an actual Redis client.
-    """
-    def __init__(self):
-        """Initialize the mock Redis client with an in-memory dictionary."""
+    def __init__(
+        self, 
+        host: str = "localhost", 
+        port: int = 16379, 
+        db: int = 0,
+        key_prefix: str = "search:",
+        **kwargs
+    ):
+        """Initialize the Redis storage backend.
+        
+        Args:
+            host: Redis host (default: localhost)
+            port: Redis port (default: 16379)
+            db: Redis database number (default: 0)
+            key_prefix: Prefix for Redis keys (default: "search:")
+        """
         self.data = {}
         self.expiry = {}
-        self.sets = {}
         self.sorted_sets = {}
-        
-    def set(self, key, value):
-        """Set a key-value pair."""
-        self.data[key] = value
-        return True
-        
-    def get(self, key):
-        """Get a value by key."""
-        return self.data.get(key)
         
     def delete(self, key):
         """Delete a key."""
@@ -94,14 +99,14 @@ class RedisStorageBackend(StorageBackend):
             prefix: Key prefix for Redis keys
             ttl_days: Default TTL for keys in days
         """
-        # In a real implementation, this would use redis.Redis
-        # self.redis_client = redis.Redis(
-        #     host=host, port=port, db=db, 
-        #     password=password, decode_responses=True
-        # )
+        # Using real Redis client
+        self.redis_client = redis.Redis(
+            host=host, port=port, db=db,
+            decode_responses=True
+        )
         
-        # For this proof-of-concept, we use a mock implementation
-        self.redis_client = MockRedisClient()
+        # No longer using mock Redis
+        # self.redis_client = MockRedisClient()
         self.prefix = prefix
         self.ttl_days = ttl_days
         
@@ -127,7 +132,7 @@ class RedisStorageBackend(StorageBackend):
             The result identifier (timestamp-based)
             
         Raises:
-            StorageError: If there's an error saving to Redis
+            StorageError: If there is an error saving to Redis
         """
         try:
             # Generate a timestamp-based identifier
