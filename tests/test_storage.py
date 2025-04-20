@@ -1,58 +1,91 @@
-"""Tests for the storage module."""
+"""Tests for the Redis storage module."""
 
 import json
-import os
-import tempfile
-from datetime import datetime, timedelta
-from pathlib import Path
-from unittest.mock import patch
+import time
+from unittest import mock
 
+import fakeredis
 import pytest
 
-from search_client.storage import (RESULT_DIR, cleanup, ensure_result_dir,
-                                  generate_filename, save_results, slugify)
+from search_client.storage import save_results, cleanup
+from search_client.storage.redis import RedisStorageBackend
+from search_client.storage.base import StorageError
 
 
 @pytest.fixture
-def mock_result_dir():
-    """Create a temporary directory for test files."""
-    original_dir = RESULT_DIR
-    with tempfile.TemporaryDirectory() as temp_dir:
-        # Patch the RESULT_DIR to use our temporary directory
-        with patch('search_client.storage.RESULT_DIR', Path(temp_dir)):
-            yield Path(temp_dir)
-    # No need to restore, as the patch context manager will handle it
+def fake_redis_setup():
+    """Set up a fake Redis server for testing."""
+    # Create a fake Redis server
+    redis_server = fakeredis.FakeServer()
+    fake_redis = fakeredis.FakeStrictRedis(server=redis_server, decode_responses=True)
+    
+    # Patch Redis client creation to use fakeredis
+    redis_patcher = mock.patch('redis.Redis', return_value=fake_redis)
+    mock_redis = redis_patcher.start()
+    
+    # Create Redis backend with fake Redis
+    redis_backend = RedisStorageBackend(
+        host="localhost",
+        port=16379,
+        prefix="test-web-search:",
+        ttl_days=1
+    )
+    
+    # Patch the global Redis backend in storage module
+    backend_patcher = mock.patch('search_client.storage._redis_backend', redis_backend)
+    mock_backend = backend_patcher.start()
+    
+    yield fake_redis, redis_backend
+    
+    # Clean up patchers
+    redis_patcher.stop()
+    backend_patcher.stop()
+
+
+def test_redis_backend_init():
+    """Test initialization of the Redis backend."""
+    # Test with default parameters
+    backend = RedisStorageBackend()
+    assert backend.prefix == "web-search:"
+    assert backend.ttl_days == 14
+    
+    # Test with custom parameters
+    backend = RedisStorageBackend(
+        host="test-host",
+        port=12345,
+        prefix="custom-prefix:",
+        ttl_days=30
+    )
+    assert backend.prefix == "custom-prefix:"
+    assert backend.ttl_days == 30
+
+
+def test_make_key():
+    """Test the _make_key method."""
+    backend = RedisStorageBackend(prefix="test:")
+    key = backend._make_key("result", "123456")
+    assert key == "test:result:123456"
 
 
 def test_slugify():
-    """Test that the slugify function properly formats text."""
-    assert slugify("Hello, World!") == "hello-world"
-    assert slugify("This is a TEST") == "this-is-a-test"
-    assert slugify("Multiple   spaces") == "multiple-spaces"
-    assert slugify("special@#$%^chars") == "special-chars"
-    assert slugify("very" + "-" * 100 + "long") == "very" + "-" * 45 + "long"
-
-
-def test_generate_filename():
-    """Test that generate_filename creates properly formatted filenames."""
-    filename = generate_filename("Test Query")
+    """Test the _slugify method."""
+    backend = RedisStorageBackend()
     
-    # Check format: YYYYMMDD-HHMMSS_test-query.json
-    assert filename.endswith("_test-query.json")
-    assert len(filename.split("_")[0]) == 15  # YYYYMMDD-HHMMSS format
-    assert "-" in filename.split("_")[0]  # Has the date-time separator
+    # Test various text inputs
+    assert backend._slugify("Hello, World!") == "hello-world"
+    assert backend._slugify("This is a TEST") == "this-is-a-test"
+    assert backend._slugify("Multiple   spaces") == "multiple-spaces"
+    assert backend._slugify("special@#$%^chars") == "special-chars"
+    
+    # Test length limitation
+    long_text = "very" + "-" * 100 + "long"
+    assert len(backend._slugify(long_text)) <= 50
 
 
-def test_ensure_result_dir(mock_result_dir):
-    """Test that ensure_result_dir creates the directory if it doesn't exist."""
-    # Directory should exist after calling ensure_result_dir
-    ensure_result_dir()
-    assert mock_result_dir.exists()
-    assert mock_result_dir.is_dir()
-
-
-def test_save_results(mock_result_dir):
-    """Test that save_results properly saves search results to a file."""
+def test_save_results(fake_redis_setup):
+    """Test saving results to Redis."""
+    fake_redis, redis_backend = fake_redis_setup
+    
     query = "test query"
     results = {
         "results": [
@@ -61,64 +94,127 @@ def test_save_results(mock_result_dir):
         ]
     }
     
-    # Save the results
-    file_path = save_results(query, results)
+    # Save results
+    identifier = redis_backend.save_results(query, results)
     
-    # Check that the file exists
-    assert file_path.exists()
-    assert file_path.is_file()
+    # Check that the key exists in Redis
+    result_key = f"{redis_backend.prefix}result:{identifier}"
+    assert fake_redis.exists(result_key)
     
-    # Check file content
-    with open(file_path, "r", encoding="utf-8") as f:
-        saved_data = json.load(f)
-    
+    # Check that data was saved correctly
+    saved_data = json.loads(fake_redis.get(result_key))
     assert saved_data["query"] == query
     assert "timestamp" in saved_data
     assert saved_data["results"] == results
+    
+    # Check that the TTL was set
+    ttl = fake_redis.ttl(result_key)
+    assert ttl > 0
+    
+    # Verify entry in index
+    index_key = f"{redis_backend.prefix}index:all"
+    members = fake_redis.zrange(index_key, 0, -1)
+    assert identifier in members
+    
+    # Verify entry in query index
+    query_key = f"{redis_backend.prefix}query:{redis_backend._slugify(query)}"
+    members = fake_redis.zrange(query_key, 0, -1)
+    assert identifier in members
 
 
-def test_cleanup_no_old_files(mock_result_dir):
-    """Test cleanup when there are no old files to delete."""
-    # Create the result directory
-    ensure_result_dir()
+def test_get_results(fake_redis_setup):
+    """Test retrieving results from Redis."""
+    fake_redis, redis_backend = fake_redis_setup
     
-    # No files exist yet
-    deleted = cleanup(days=14)
-    assert deleted == 0
+    query = "test query"
+    results = {
+        "results": [
+            {"title": "Test Result", "url": "https://example.com/test", "content": "Test content"}
+        ]
+    }
+    
+    # Save results first
+    identifier = redis_backend.save_results(query, results)
+    
+    # Get the results
+    retrieved = redis_backend.get_results(identifier)
+    
+    # Check that the data matches
+    assert retrieved["query"] == query
+    assert retrieved["results"] == results
+    
+    # Check that TTL was extended
+    result_key = f"{redis_backend.prefix}result:{identifier}"
+    initial_ttl = fake_redis.ttl(result_key)
+    
+    # Artificially reduce TTL for testing
+    fake_redis.expire(result_key, 1000)
+    reduced_ttl = fake_redis.ttl(result_key)
+    assert reduced_ttl < initial_ttl
+    
+    # Access again and check that TTL is extended
+    redis_backend.get_results(identifier)
+    extended_ttl = fake_redis.ttl(result_key)
+    assert extended_ttl > reduced_ttl
 
 
-def test_cleanup_with_old_files(mock_result_dir):
-    """Test cleanup when there are old files to delete."""
-    # Create the result directory
-    ensure_result_dir()
+def test_list_results(fake_redis_setup):
+    """Test listing results from Redis."""
+    fake_redis, redis_backend = fake_redis_setup
     
-    # Create some test files
-    current_time = datetime.now()
+    # Save multiple results
+    queries = ["query one", "query two", "query three"]
+    identifiers = []
     
-    # Create a recent file (should not be deleted)
-    recent_file = mock_result_dir / "recent_file.json"
-    recent_file.touch()
+    for query in queries:
+        results = {
+            "results": [
+                {"title": f"Result for {query}", "url": f"https://example.com/{query}", "content": f"Content for {query}"}
+            ]
+        }
+        identifier = redis_backend.save_results(query, results)
+        identifiers.append(identifier)
     
-    # Create old files (should be deleted)
-    old_files = []
-    for i in range(3):
-        old_file = mock_result_dir / f"old_file_{i}.json"
-        old_file.touch()
-        old_files.append(old_file)
-        
-    # Modify access/modification times to make files appear old
-    old_time = current_time - timedelta(days=20)
-    old_timestamp = old_time.timestamp()
+    # List all results
+    all_results = redis_backend.list_results(limit=10)
+    assert len(all_results) == 3
     
-    for file in old_files:
-        os.utime(file, (old_timestamp, old_timestamp))
+    # Test pagination
+    paginated = redis_backend.list_results(limit=2, offset=1)
+    assert len(paginated) == 2
     
-    # Run cleanup (should delete the old files)
-    deleted = cleanup(days=14)
-    
-    # Check that only the old files were deleted
-    assert deleted == 3
-    assert recent_file.exists()
-    for file in old_files:
-        assert not file.exists()
+    # Test filtering by query
+    filtered = redis_backend.list_results(query="query one")
+    assert len(filtered) == 1
+    assert filtered[0]["query"] == "query one"
 
+
+def test_delete_results(fake_redis_setup):
+    """Test deleting results from Redis."""
+    fake_redis, redis_backend = fake_redis_setup
+    
+    # Save a result first
+    query = "delete test"
+    results = {"results": [{"title": "Test", "url": "https://example.com", "content": "Content"}]}
+    identifier = redis_backend.save_results(query, results)
+    
+    # Verify it exists
+    result_key = f"{redis_backend.prefix}result:{identifier}"
+    assert fake_redis.exists(result_key)
+    
+    # Delete it
+    success = redis_backend.delete_results(identifier)
+    assert success is True
+    
+    # Verify it's gone
+    assert not fake_redis.exists(result_key)
+    
+    # Verify removed from indexes
+    index_key = f"{redis_backend.prefix}index:all"
+    query_key = f"{redis_backend.prefix}query:{redis_backend._slugify(query)}"
+    
+    members = fake_redis.zrange(index_key, 0, -1)
+    assert identifier not in members
+    
+    query_members = fake_redis.zrange(query_key, 0, -1)
+    assert identifier not in query_members

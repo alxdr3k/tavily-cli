@@ -174,9 +174,30 @@ class RedisStorageBackend(StorageBackend):
         return f"{self.prefix}{key_type}:{identifier}"
         
     def _slugify(self, text: str) -> str:
-        """Convert text to a Redis-safe slug."""
-        # Simple implementation for the proof of concept
-        return text.lower().replace(" ", "-")[:50]
+        """Convert text to a Redis-safe slug.
+        
+        This converts a string to a consistent, URL-friendly format by:
+        - Converting to lowercase
+        - Replacing spaces and punctuation with hyphens
+        - Removing consecutive hyphens
+        - Limiting length to 50 characters
+        """
+        import re
+        
+        # Convert to lowercase
+        slug = text.lower()
+        
+        # Replace non-alphanumeric characters with hyphens
+        slug = re.sub(r'[^a-z0-9]', '-', slug)
+        
+        # Replace multiple consecutive hyphens with a single hyphen
+        slug = re.sub(r'-+', '-', slug)
+        
+        # Remove leading and trailing hyphens
+        slug = slug.strip('-')
+        
+        # Limit length to 50 characters
+        return slug[:50]
         
     def save_results(self, query: str, results: Dict[str, Any]) -> str:
         """Save search results to Redis.
@@ -259,6 +280,12 @@ class RedisStorageBackend(StorageBackend):
             
             if not result_data:
                 return None
+            
+            # Update the TTL when a cache entry is accessed (cache hit)
+            if self.ttl_days > 0:
+                seconds = self.ttl_days * 24 * 60 * 60
+                self.redis_client.expire(result_key, seconds)
+                logger.debug(f"Cache hit: Extended TTL for {identifier} by {self.ttl_days} days")
                 
             return json.loads(result_data)
             

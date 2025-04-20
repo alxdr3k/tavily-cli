@@ -85,8 +85,15 @@ def search(
             exclude_domains=exclude_domains,
         )
         
-        # Save the results
-        file_path = save_results(query, search_results)
+        # Only save results if they didn't come from cache
+        if not search_results.get("_from_cache", False):
+            logger.info("Saving fresh results to Redis")
+            file_path = save_results(query, search_results)
+        else:
+            # For cache hits, we can retrieve the existing file path
+            # This avoids the duplicate "Results saved to Redis with ID: xyz" message
+            logger.info("Using cached results, not saving again")
+            file_path = f"Using cached results for: {query}"
         
         # Display success message
         num_results = len(search_results.get("results", []))

@@ -2,19 +2,23 @@
 
 import os
 import sys
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 import httpx
 from dotenv import load_dotenv
 from tavily import TavilyClient
 
 from search_client.logger import logger
+from search_client.storage import _get_redis_backend, save_results
 
 # Load environment variables from .env file
 load_dotenv()
 
 # Get Tavily API key from environment
 TAVILY_API_KEY = os.getenv("TAVILY_API_KEY")
+
+# Configure cache TTL (default 24 hours = 86400 seconds)
+SEARCH_CACHE_TTL_SECONDS = int(os.getenv("SEARCH_CACHE_TTL_SECONDS", "86400"))
 
 
 class SearchError(Exception):
@@ -34,6 +38,56 @@ def validate_api_key() -> None:
         raise SearchError("Tavily API key not found")
 
 
+def get_cached_results(
+    query: str,
+    search_depth: str = "basic",
+    max_results: int = 10,
+    include_raw: bool = False,
+    include_domains: Optional[List[str]] = None,
+    exclude_domains: Optional[List[str]] = None,
+) -> Tuple[bool, Optional[Dict[str, Any]]]:
+    """Check if results for this query are already cached in Redis.
+    
+    Args:
+        query: The search query string
+        search_depth: Search depth, either "basic" or "comprehensive"
+        max_results: Maximum number of results to return
+        include_raw: Whether to include raw content in results
+        include_domains: Optional list of domains to include in search
+        exclude_domains: Optional list of domains to exclude from search
+        
+    Returns:
+        Tuple of (found, results), where found is a boolean indicating if
+        results were found in cache, and results is the cached data if found
+    """
+    try:
+        # Get Redis backend
+        redis_backend = _get_redis_backend()
+        
+        # Get the most recent result for this query
+        cached_results = redis_backend.list_results(query=query, limit=1)
+        
+        if cached_results and len(cached_results) > 0:
+            # We found a cached result
+            cached_data = cached_results[0]
+            
+            # Extract the actual search results from the cached data
+            if "results" in cached_data and "results" in cached_data["results"]:
+                logger.info(f"Cache HIT for query: {query}")
+                # Add a flag to indicate this came from cache
+                result = cached_data["results"]
+                result["_from_cache"] = True
+                return True, result
+        
+        logger.info(f"Cache MISS for query: {query}")
+        return False, None
+            
+    except Exception as e:
+        # If there's any error accessing the cache, log it but don't fail the search
+        logger.warning(f"Error checking Redis cache: {e}")
+        return False, None
+
+
 def run_search(
     query: str, 
     max_results: int = 10, 
@@ -41,7 +95,7 @@ def run_search(
     include_raw: bool = False,
     include_domains: Optional[List[str]] = None,
     exclude_domains: Optional[List[str]] = None,
-) -> List[Dict[str, Any]]:
+) -> Dict[str, Any]:
     """Run a web search using Tavily API.
     
     Args:
@@ -59,10 +113,26 @@ def run_search(
         SearchError: If there's an error with the search request
     """
     try:
-        validate_api_key()
-
         logger.info(f"Searching for: {query}")
         logger.info(f"Max results: {max_results}, depth: {search_depth}")
+
+        # Check if results are already in Redis cache
+        found_in_cache, cached_results = get_cached_results(
+            query=query,
+            search_depth=search_depth,
+            max_results=max_results,
+            include_raw=include_raw,
+            include_domains=include_domains,
+            exclude_domains=exclude_domains
+        )
+        
+        # If found in cache, return cached results
+        if found_in_cache and cached_results is not None:
+            # Ensure the format matches what would be returned from Tavily API
+            return cached_results
+        
+        # If not in cache, we need to make an API call
+        validate_api_key()
 
         # Initialize Tavily client
         client = TavilyClient(api_key=TAVILY_API_KEY)
@@ -82,11 +152,21 @@ def run_search(
             search_params["exclude_domains"] = exclude_domains
             
         # Execute search
+        # Execute search
         response = client.search(**search_params)
-        
         # Extract and return results
         if "results" in response:
             logger.info(f"Found {len(response['results'])} results")
+            # Mark that these results are fresh from the API (not from cache)
+            response["_from_cache"] = False
+            
+            # Save the results to Redis cache
+            try:
+                save_results(query, response)
+                logger.info(f"Saved search results to cache for query: {query}")
+            except Exception as e:
+                logger.warning(f"Failed to save results to cache: {e}")
+                
             return response
         else:
             logger.warning("No results field in API response")
