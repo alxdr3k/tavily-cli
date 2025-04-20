@@ -24,7 +24,7 @@ A command-line web search client that uses the [Tavily API](https://tavily.com/)
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/web-search-client.git
+git clone https://github.com/alxdr3k/web-search-client.git
 cd web-search-client
 
 # Create a virtual environment and install
@@ -41,7 +41,7 @@ uv pip install -e ".[redis]"
 ### Using pip
 
 ```bash
-pip install git+https://github.com/yourusername/web-search-client.git
+pip install git+https://github.com/alxdr3k/web-search-client.git
 ```
 
 ## Configuration
@@ -131,7 +131,7 @@ To set up the development environment:
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/web-search-client.git
+git clone https://github.com/alxdr3k/web-search-client.git
 cd web-search-client
 
 # Create a virtual environment and install dev dependencies
