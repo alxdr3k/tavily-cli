@@ -1,4 +1,4 @@
-"""Web Search Client using Tavily API.
+"""Tavily CLI using Tavily API.
 
 This package provides command-line functionality for performing web searches
 via Tavily API and saving results locally.

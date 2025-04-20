@@ -1,7 +1,7 @@
 [project]
-name = "web-search-client"
+name = "tavily-cli"
 version = "0.1.0"
-description = "Command-line web search client using Tavily API with file and Redis-based result storage"
+description = "Command-line Tavily API client with file and Redis-based result storage"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"
@@ -26,7 +26,7 @@ dependencies = [
 ]
 
 [project.scripts]
-web-search = "search_client.cli:cli"
+tavily = "tavily_cli.cli:cli"
 
 [dependency-groups]
 dev = [
@@ -39,12 +39,12 @@ redis = [
 ]
 
 [tool.setuptools]
-packages = ["search_client"]
+packages = ["tavily_cli"]
 include-package-data = false
 
 [project.urls]
-"Homepage" = "https://github.com/alxdr3k/web-search-client"
-"Bug Tracker" = "https://github.com/alxdr3k/web-search-client/issues"
+"Homepage" = "https://github.com/alxdr3k/tavily-cli"
+"Bug Tracker" = "https://github.com/alxdr3k/tavily-cli/issues"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

@@ -7,8 +7,8 @@ from unittest import mock
 import fakeredis
 import pytest
 
-from search_client.storage.redis import RedisStorageBackend
-from search_client.storage.base import StorageError
+from tavily_cli.storage.redis import RedisStorageBackend
+from tavily_cli.storage.base import StorageError
 
 
 @pytest.fixture
@@ -26,12 +26,12 @@ def fake_redis_setup():
     redis_backend = RedisStorageBackend(
         host="localhost",
         port=16379,
-        prefix="test-web-search:",
+        prefix="test-tavily:",
         ttl_days=1
     )
     
     # Patch the global Redis backend in storage module
-    backend_patcher = mock.patch('search_client.storage._redis_backend', redis_backend)
+    backend_patcher = mock.patch('tavily_cli.storage._redis_backend', redis_backend)
     mock_backend = backend_patcher.start()
     
     yield fake_redis, redis_backend
@@ -45,7 +45,7 @@ def test_redis_backend_init():
     """Test initialization of the Redis backend."""
     # Test with default parameters
     backend = RedisStorageBackend()
-    assert backend.prefix == "web-search:"
+    assert backend.prefix == "tavily:"
     assert backend.ttl_days == 14
     
     # Test with custom parameters

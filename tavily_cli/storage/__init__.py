@@ -1,10 +1,10 @@
-"""Storage backends for web search client."""
+"""Storage backends for Tavily CLI."""
 
 import os
 from typing import Dict, Any, Optional
 
-from search_client.storage.base import StorageBackend, StorageError
-from search_client.storage.redis import RedisStorageBackend
+from tavily_cli.storage.base import StorageBackend, StorageError
+from tavily_cli.storage.redis import RedisStorageBackend
 
 __all__ = [
     "StorageBackend", 

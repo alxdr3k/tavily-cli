@@ -1,14 +1,14 @@
-"""Command-line interface for web search client."""
+"""Command-line interface for Tavily CLI."""
 
 import sys
 from typing import List, Optional
 
 import click
 
-from search_client import __version__
-from search_client.logger import logger
-from search_client.search import SearchError, run_search
-from search_client.storage import cleanup, save_results
+from tavily_cli import __version__
+from tavily_cli.logger import logger
+from tavily_cli.search import SearchError, run_search
+from tavily_cli.storage import cleanup, save_results
 @click.command()
 @click.version_option(version=__version__)
 @click.argument("query", required=False)
@@ -40,9 +40,9 @@ from search_client.storage import cleanup, save_results
 )
 @click.option(
     "--depth", "-d", 
-    type=click.Choice(["basic", "comprehensive"]), 
-    default="basic",
-    help="Search depth (basic is faster, comprehensive is more thorough)"
+    type=click.Choice(["basic", "advanced"]), 
+    default="advanced",
+    help="Search depth (basic is faster, advanced is more thorough)"
 )
 @click.option(
     "--raw/--no-raw", 
@@ -84,7 +84,7 @@ def cli(
     retention_days: int,
     include_answer: str,
 ):
-    """Web Search Client using Tavily API.
+    """Tavily CLI using Tavily API.
     
     Search the web and save results to local files.
     

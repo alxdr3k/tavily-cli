@@ -1,4 +1,4 @@
-"""Tests for Redis caching functionality in search_client."""
+"""Tests for Redis caching functionality in tavily_cli."""
 
 import json
 import time
@@ -8,8 +8,8 @@ from unittest import mock
 import fakeredis
 import pytest
 
-from search_client.search import run_search, TavilyClient
-from search_client.storage.redis import RedisStorageBackend
+from tavily_cli.search import run_search, TavilyClient
+from tavily_cli.storage.redis import RedisStorageBackend
 
 
 class TestSearchCache(unittest.TestCase):
@@ -29,12 +29,12 @@ class TestSearchCache(unittest.TestCase):
         self.redis_backend = RedisStorageBackend(
             host="localhost",
             port=16379,
-            prefix="test-web-search:",
+            prefix="test-tavily:",
             ttl_days=1
         )
         
         # Patch the global Redis backend
-        self.backend_patcher = mock.patch('search_client.storage._redis_backend', self.redis_backend)
+        self.backend_patcher = mock.patch('tavily_cli.storage._redis_backend', self.redis_backend)
         self.mock_backend = self.backend_patcher.start()
         
         # Sample search results to be used by the mock Tavily client
@@ -49,7 +49,7 @@ class TestSearchCache(unittest.TestCase):
         }
         
         # Create a mock Tavily client - patch it directly in the search module
-        self.tavily_patcher = mock.patch('search_client.search.TavilyClient')
+        self.tavily_patcher = mock.patch('tavily_cli.search.TavilyClient')
         self.mock_tavily = self.tavily_patcher.start()
         
         # Configure the mock client instance

@@ -35,7 +35,6 @@ RUN pip install -e ".[redis]"
 RUN mkdir -p /app/search_results && chmod 777 /app/search_results
 
 # Set entrypoint to the CLI tool
-ENTRYPOINT ["web-search"]
+ENTRYPOINT ["tavily"]
 # Default command to show help
 CMD ["--help"]
-

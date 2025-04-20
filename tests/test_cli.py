@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 import click.testing
 import pytest
 
-from search_client.cli import cli
+from tavily_cli.cli import cli
 
 
 @pytest.fixture
@@ -18,7 +18,7 @@ def cli_runner():
 @pytest.fixture
 def mock_search():
     """Mock the search.run_search function."""
-    with patch("search_client.cli.run_search") as mock:
+    with patch("tavily_cli.cli.run_search") as mock:
         # Setup mock search results
         mock.return_value = {
             "results": [
@@ -40,8 +40,8 @@ def mock_search():
 @pytest.fixture
 def mock_storage():
     """Mock the storage functions."""
-    with patch("search_client.cli.cleanup") as mock_cleanup, \
-         patch("search_client.cli.save_results") as mock_save:
+    with patch("tavily_cli.cli.cleanup") as mock_cleanup, \
+         patch("tavily_cli.cli.save_results") as mock_save:
         
         # Setup the save_results mock to return a file path
         mock_save.return_value = Path("search_results/20251231-120000_test-query.json")
@@ -90,7 +90,7 @@ def test_search_command_with_options(cli_runner, mock_search, mock_storage):
     """Test the search command with various options."""
     result = cli_runner.invoke(cli, [
         "--max-results", "5",
-        "--depth", "comprehensive",
+        "--depth", "advanced",
         "--raw",
         "--include-domain", "example.com",
         "--exclude-domain", "spam.com",
@@ -108,7 +108,7 @@ def test_search_command_with_options(cli_runner, mock_search, mock_storage):
     args, kwargs = mock_search.call_args
     assert kwargs["query"] == "advanced query"
     assert kwargs["max_results"] == 5
-    assert kwargs["search_depth"] == "comprehensive"
+    assert kwargs["search_depth"] == "advanced"
     assert kwargs["include_raw"] is True
     assert kwargs["include_domains"] == ["example.com"]
     assert kwargs["exclude_domains"] == ["spam.com"]

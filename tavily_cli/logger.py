@@ -1,4 +1,4 @@
-"""Logging configuration for the web search client."""
+"""Logging configuration for the Tavily CLI."""
 
 import logging
 import os
@@ -32,7 +32,7 @@ class ColorFormatter(logging.Formatter):
         return log_message
 
 
-def setup_logger(name: str = "search_client") -> logging.Logger:
+def setup_logger(name: str = "tavily_cli") -> logging.Logger:
     """Configure and return a logger with the specified name.
 
     Args:

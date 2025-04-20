@@ -1,4 +1,4 @@
-"""Redis storage backend for web search client."""
+"""Redis storage backend for Tavily CLI."""
 
 import json
 import logging
@@ -10,8 +10,8 @@ from typing import Any, Dict, List, Optional, Tuple
 # Import real Redis
 import redis
 
-from search_client.logger import logger
-from search_client.storage.base import StorageBackend, StorageError
+from tavily_cli.logger import logger
+from tavily_cli.storage.base import StorageBackend, StorageError
 
 # Mock Redis implementation - kept for reference but not used
 class MockRedisClient:
@@ -111,7 +111,7 @@ class RedisStorageBackend(StorageBackend):
         port: int = 16379,
         db: int = 0,
         password: Optional[str] = None,
-        prefix: str = "web-search:",
+        prefix: str = "tavily:",
         ttl_days: int = 14,
         ssl: bool = False
     ):

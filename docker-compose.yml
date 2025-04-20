@@ -1,9 +1,11 @@
 version: "3.9"
 
 services:
-  web-search-client:
-    build: .
-    image: web-search-client:latest
+  tavily-cli:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: tavily-cli:latest
     environment:
       TAVILY_API_KEY: ${TAVILY_API_KEY}
       STORAGE_BACKEND: "redis"  # force Redis storage only
@@ -34,4 +36,3 @@ services:
 
 volumes:
   redis-data:  # named volume for Redis data
-

@@ -1,4 +1,4 @@
-"""Tavily search functionality for web-search-client."""
+"""Tavily search functionality for tavily-cli."""
 
 import os
 import sys
@@ -8,8 +8,8 @@ import httpx
 from dotenv import load_dotenv
 from tavily import TavilyClient
 
-from search_client.logger import logger
-from search_client.storage import _get_redis_backend, save_results
+from tavily_cli.logger import logger
+from tavily_cli.storage import _get_redis_backend, save_results
 # Load environment variables from .env file
 load_dotenv()
 
