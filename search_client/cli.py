@@ -4,7 +4,6 @@ import sys
 from typing import List, Optional
 
 import click
-from click.exceptions import Abort
 
 from search_client import __version__
 from search_client.logger import logger
@@ -125,34 +124,6 @@ def search(
         click.echo(f"An unexpected error occurred: {e}", err=True)
         sys.exit(1)
 
-
-@cli.command()
-@click.option(
-    "--days", "-d",
-    default=14,
-    help="Delete files older than this many days (default: 14)"
-)
-@click.option(
-    "--force", "-f",
-    is_flag=True,
-    help="Don't ask for confirmation"
-)
-def clean(days: int, force: bool):
-    """Clean up old search result files."""
-    try:
-        if not force:
-            click.confirm(f"This will delete search results older than {days} days. Continue?", abort=True)
-        
-        deleted = cleanup(days=days)
-        click.echo(f"Cleaned up {deleted} old result file(s).")
-        
-    except Abort:
-        # Let Click handle the abort case naturally
-        raise
-    except Exception as e:
-        logger.error(f"Error cleaning up files: {e}")
-        click.echo(f"Error: {e}", err=True)
-        sys.exit(1)
 
 
 if __name__ == "__main__":
