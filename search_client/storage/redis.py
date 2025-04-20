@@ -35,10 +35,35 @@ class MockRedisClient:
         self.expiry = {}
         self.sorted_sets = {}
         
+    def ping(self):
+        """Test connection, always returns True for mock."""
+        return True
+        
+    def set(self, key, value, ex=None):
+        """Set a string value in the mock Redis."""
+        self.data[key] = value
+        if ex:  # Set expiration if provided
+            self.expire(key, ex)
+        return True
+        
+    def get(self, key):
+        """Get a string value from the mock Redis."""
+        # Check if key exists and hasn't expired
+        if key in self.data:
+            if key in self.expiry and time.time() > self.expiry[key]:
+                # Key has expired
+                del self.data[key]
+                del self.expiry[key]
+                return None
+            return self.data[key]
+        return None
+        
     def delete(self, key):
         """Delete a key."""
         if key in self.data:
             del self.data[key]
+            if key in self.expiry:
+                del self.expiry[key]
             return 1
         return 0
         
