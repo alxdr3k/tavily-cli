@@ -269,4 +269,15 @@ In verbose mode, the CLI will show connection details:
 
 ## 📄 License
 
-MIT
+This project is licensed under the MIT License - a permissive open source license that allows you to:
+
+- ✅ Use the software for commercial purposes
+- ✅ Modify the software
+- ✅ Distribute the software
+- ✅ Use and modify the software privately
+
+The only requirement is that the original copyright and license notice must be included in any copy of the software/source.
+
+Copyright (c) 2025 alxdr3k
+
+For the full license text, see the [MIT License](https://opensource.org/licenses/MIT).
