@@ -45,7 +45,10 @@ include-package-data = false
 [project.urls]
 "Homepage" = "https://github.com/alxdr3k/tavily-cli"
 "Bug Tracker" = "https://github.com/alxdr3k/tavily-cli/issues"
-
+"Documentation" = "https://github.com/alxdr3k/tavily-cli#readme"
+"Source Code" = "https://github.com/alxdr3k/tavily-cli"
+"Changelog" = "https://github.com/alxdr3k/tavily-cli/releases"
+"Funding" = "https://github.com/sponsors/alxdr3k"
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = "test_*.py"

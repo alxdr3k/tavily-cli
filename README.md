@@ -1,5 +1,7 @@
 # 🔍 Tavily CLI
 
+![GitHub release (latest by date)](https://img.shields.io/github/v/release/alxdr3k/tavily-cli?color=blue&label=latest%20release)
+![License](https://img.shields.io/github/license/alxdr3k/tavily-cli)
 A command-line client that uses the [Tavily API](https://tavily.com/) to perform web searches and save results locally.
 
 ## ✨ Features

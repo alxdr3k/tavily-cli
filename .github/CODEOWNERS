@@ -1,0 +1,9 @@
+# These owners will be the default owners for everything in
+# the repo. Unless a later match takes precedence,
+# @alxdr3k will be requested for review when someone opens a pull request.
+*       @alxdr3k
+
+# Specific file ownership can be defined here
+# For example:
+# /tavily_cli/cli.py @specific-user
+
