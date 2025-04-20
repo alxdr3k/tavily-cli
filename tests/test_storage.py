@@ -7,7 +7,6 @@ from unittest import mock
 import fakeredis
 import pytest
 
-from search_client.storage import save_results, cleanup
 from search_client.storage.redis import RedisStorageBackend
 from search_client.storage.base import StorageError
 

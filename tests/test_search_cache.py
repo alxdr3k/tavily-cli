@@ -68,7 +68,7 @@ class TestSearchCache(unittest.TestCase):
         """Test that the first search calls the Tavily API."""
         # Run the search
         query = "test query"
-        results = run_search(query, max_results=1)
+        results = run_search(query, max_results=1, search_depth="basic", include_raw=False, include_domains=None, exclude_domains=None, include_answer="advanced")
         
         # Verify that Tavily API was called
         self.mock_tavily_instance.search.assert_called_once()
@@ -85,13 +85,13 @@ class TestSearchCache(unittest.TestCase):
         query = "test query"
         
         # First search - should call Tavily
-        run_search(query, max_results=1)
+        run_search(query, max_results=1, search_depth="basic", include_raw=False, include_domains=None, exclude_domains=None, include_answer="advanced")
         
         # Reset the mock to track new calls
         self.mock_tavily_instance.search.reset_mock()
         
         # Second search with same query - should use cache
-        results = run_search(query, max_results=1)
+        results = run_search(query, max_results=1, search_depth="basic", include_raw=False, include_domains=None, exclude_domains=None, include_answer="advanced")
         
         # Verify that Tavily API was NOT called
         self.mock_tavily_instance.search.assert_not_called()
@@ -107,7 +107,7 @@ class TestSearchCache(unittest.TestCase):
         query = "test query"
         
         # First search - should call Tavily
-        run_search(query, max_results=1)
+        run_search(query, max_results=1, search_depth="basic", include_raw=False, include_domains=None, exclude_domains=None, include_answer="advanced")
         
         # Reset the mock to track new calls
         self.mock_tavily_instance.search.reset_mock()
@@ -132,7 +132,7 @@ class TestSearchCache(unittest.TestCase):
                 self.fake_redis.delete(result_key)
         
         # Search again
-        results = run_search(query, max_results=1)
+        results = run_search(query, max_results=1, search_depth="basic", include_raw=False, include_domains=None, exclude_domains=None, include_answer="advanced")
         
         # Verify that Tavily API was called again
         self.mock_tavily_instance.search.assert_called_once()
@@ -145,7 +145,7 @@ class TestSearchCache(unittest.TestCase):
         query = "test query for ttl extension"
         
         # First search - creates a cache entry
-        run_search(query, max_results=1)
+        run_search(query, max_results=1, search_depth="basic", include_raw=False, include_domains=None, exclude_domains=None, include_answer="advanced")
         
         # Find the cache key for the result
         query_key = f"{self.redis_backend.prefix}query:{self.redis_backend._slugify(query)}"

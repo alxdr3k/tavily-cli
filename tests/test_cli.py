@@ -64,7 +64,7 @@ def test_version(cli_runner):
 
 def test_search_command_basic(cli_runner, mock_search, mock_storage):
     """Test the basic search command."""
-    result = cli_runner.invoke(cli, ["search", "test query"])
+    result = cli_runner.invoke(cli, ["test query"])
     
     # Check exit code and output
     assert result.exit_code == 0
@@ -89,7 +89,6 @@ def test_search_command_basic(cli_runner, mock_search, mock_storage):
 def test_search_command_with_options(cli_runner, mock_search, mock_storage):
     """Test the search command with various options."""
     result = cli_runner.invoke(cli, [
-        "search", 
         "--max-results", "5",
         "--depth", "comprehensive",
         "--raw",
@@ -121,11 +120,11 @@ def test_clean_command(cli_runner, mock_storage):
     mock_storage["cleanup"].return_value = 3
     
     # Test with --force to skip confirmation
-    result = cli_runner.invoke(cli, ["clean", "--force"])
+    result = cli_runner.invoke(cli, ["--clean", "--force"])
     
     # Check exit code and output
     assert result.exit_code == 0
-    assert "Cleaned up 3 old result file(s)" in result.output
+    assert "Cleaned up 3 result file(s) older than 14 days" in result.output
     
     # Verify function calls
     mock_storage["cleanup"].assert_called_once_with(days=14)  # default value
@@ -137,11 +136,11 @@ def test_clean_command_with_days(cli_runner, mock_storage):
     mock_storage["cleanup"].return_value = 5
     
     # Test with --force to skip confirmation and custom days
-    result = cli_runner.invoke(cli, ["clean", "--force", "--days", "7"])
+    result = cli_runner.invoke(cli, ["--clean", "--force", "--days", "7"])
     
     # Check exit code and output
     assert result.exit_code == 0
-    assert "Cleaned up 5 old result file(s)" in result.output
+    assert "Cleaned up 5 result file(s) older than 7 days" in result.output
     
     # Verify function calls with correct parameters
     mock_storage["cleanup"].assert_called_once_with(days=7)
@@ -150,16 +149,16 @@ def test_clean_command_with_days(cli_runner, mock_storage):
 def test_clean_command_confirmation(cli_runner, mock_storage):
     """Test the clean command confirmation prompt."""
     # Mock confirmation response (user enters 'n' to cancel)
-    result = cli_runner.invoke(cli, ["clean"], input="n\n")
+    result = cli_runner.invoke(cli, ["--clean"], input="n\n")
     
     # Should abort without calling cleanup
-    assert result.exit_code != 0
-    assert "Aborted" in result.output
+    assert result.exit_code == 0
+    assert "Cleanup cancelled" in result.output
     mock_storage["cleanup"].assert_not_called()
     
     # Reset mock and test with 'y' response
     mock_storage["cleanup"].reset_mock()
-    result = cli_runner.invoke(cli, ["clean"], input="y\n")
+    result = cli_runner.invoke(cli, ["--clean"], input="y\n")
     
     # Should proceed with cleanup
     assert result.exit_code == 0

@@ -9,8 +9,6 @@ from search_client import __version__
 from search_client.logger import logger
 from search_client.search import SearchError, run_search
 from search_client.storage import cleanup, save_results
-
-
 @click.command()
 @click.version_option(version=__version__)
 @click.argument("query", required=False)

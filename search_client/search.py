@@ -10,7 +10,6 @@ from tavily import TavilyClient
 
 from search_client.logger import logger
 from search_client.storage import _get_redis_backend, save_results
-
 # Load environment variables from .env file
 load_dotenv()
 
