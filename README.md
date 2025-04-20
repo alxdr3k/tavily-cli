@@ -124,35 +124,32 @@ uv add redis
 
 ```bash
 # Basic Redis storage usage
-tavily --storage redis "quantum computing"
-
-# Custom Redis server configuration
-tavily --storage redis --redis-host myredis.example.com --redis-port 6380 "quantum computing"
-
-# Custom TTL configuration
-tavily --storage redis --ttl-days 30 "climate change solutions"
-
-# List all search results in Redis
-tavily --list --storage redis
-
-# Get specific results from Redis by ID
-tavily --get 20250420-120145_quantum-computing --storage redis
-
-# Delete specific results from Redis
-tavily --delete 20250420-120145_quantum-computing --storage redis
+tavily "quantum computing"
 
 # Clean old results from Redis
-tavily --clean --storage redis --days 7
+tavily --clean --days 7
 ```
 
-### Redis-Specific Options
+Redis is used by default for storage. You can configure Redis connection parameters using environment variables as described below.
 
-- `--redis-host TEXT`: Redis server hostname (default: localhost)
-- `--redis-port INTEGER`: Redis server port (default: 6379)
-- `--redis-db INTEGER`: Redis database ID (default: 0)
-- `--redis-password TEXT`: Redis password (if required)
-- `--redis-prefix TEXT`: Key prefix for Redis keys (default: tavily:)
-- `--ttl-days INTEGER`: Number of days to keep results in Redis (default: 14)
+### Redis Configuration via Environment Variables
+
+Redis connection can be configured using the following environment variables:
+
+- `REDIS_HOST`: Redis server hostname (default: localhost)
+- `REDIS_PORT`: Redis server port (default: 16379 for local, 6379 when running in Docker)
+- `REDIS_PASSWORD`: Redis password for authentication (if required)
+- `IN_DOCKER`: When set to "true", uses container port (6379) instead of host port
+
+Example of setting Redis environment variables:
+
+```bash
+export REDIS_HOST=myredis.example.com
+export REDIS_PORT=6380
+export REDIS_PASSWORD=mysecretpassword
+```
+
+Note: If Redis connection fails, the application will automatically fall back to an in-memory mock Redis implementation, allowing normal operation without a Redis server.
 
 ### Troubleshooting Redis Connection
 
