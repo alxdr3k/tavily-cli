@@ -1,0 +1,25 @@
+version: "3.9"
+
+services:
+  web-search-client:
+    build: .
+    image: web-search-client:latest
+    environment:
+      TAVILY_API_KEY: ${TAVILY_API_KEY}
+      STORAGE_BACKEND: "redis"  # force Redis storage only
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+    depends_on:
+      - redis
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]  # enable persistence
+    volumes:
+      - redis-data:/data  # persist Redis data
+    ports:
+      - "16379:6379"  # expose Redis port 6379 as 16379 on host
+
+volumes:
+  redis-data:  # named volume for Redis data
+
