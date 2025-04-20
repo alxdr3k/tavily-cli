@@ -7,8 +7,7 @@ A command-line client that uses the [Tavily API](https://tavily.com/) to perform
 ## ✨ Features
 
 - 🔎 **Easy Web Searching**: Run web searches directly from your terminal
-- 💾 **Result Storage**: Save search results locally as JSON files
-- 🗄️ **Redis Integration**: Optional storage in Redis for sharing and persistence
+- 💾 **Result Storage**: Store search results using Redis
 - 🛠️ **Customizable Searches**:
   - 🔢 Limit number of results
   - 🌐 Include/exclude specific domains
@@ -107,7 +106,7 @@ pytest
 
 ## 🗄️ Redis Integration
 
-The Tavily CLI supports Redis as an alternative storage backend for search results. This is an optional advanced feature that provides several benefits over file-based storage:
+The Tavily CLI uses Redis as the primary storage backend for search results. This provides several benefits:
 
 - **Persistence**: Results can be stored beyond local files
 - **Expiration**: Automatic TTL-based cleanup
@@ -132,7 +131,7 @@ tavily "quantum computing"
 tavily --clean --days 7
 ```
 
-Redis is used by default for storage. You can configure Redis connection parameters using environment variables as described below.
+Redis is the core storage mechanism. You can configure Redis connection parameters using environment variables as described below.
 
 ### Redis Configuration via Environment Variables
 
@@ -151,7 +150,7 @@ export REDIS_PORT=6380
 export REDIS_PASSWORD=mysecretpassword
 ```
 
-Note: If Redis connection fails, the application will automatically fall back to an in-memory mock Redis implementation, allowing normal operation without a Redis server.
+Note: If Redis connection fails, the application will automatically fall back to an in-memory mock Redis implementation (still using the Redis interface), allowing normal operation without a Redis server.
 
 ### Troubleshooting Redis Connection
 
