@@ -30,9 +30,9 @@ def cli():
 )
 @click.option(
     "--depth", "-d", 
-    type=click.Choice(["basic", "comprehensive"]), 
-    default="basic",
-    help="Search depth (basic is faster, comprehensive is more thorough)"
+    type=click.Choice(["basic", "advanced"]), 
+    default="advanced",
+    help="Search depth (basic is faster, advanced is more thorough)"
 )
 @click.option(
     "--raw/--no-raw", 
@@ -54,6 +54,12 @@ def cli():
     default=14,
     help="Number of days to keep result files (default: 14)"
 )
+@click.option(
+    "--include-answer", "-a",
+    type=click.Choice(["false", "basic", "advanced"]),
+    default="advanced",
+    help="Include an AI-generated answer in results (default: advanced)"
+)
 def search(
     query: str,
     max_results: int,
@@ -62,10 +68,16 @@ def search(
     include_domain: List[str],
     exclude_domain: List[str],
     retention_days: int,
+    include_answer: str,
 ):
     """Search the web and save results to a local file.
     
     QUERY: The search query string
+    
+    The include_answer option can be set to:
+    - 'false': No AI-generated answer
+    - 'basic': A quick answer summary
+    - 'advanced': A more detailed answer (default)
     """
     try:
         # First clean up old results
@@ -75,6 +87,9 @@ def search(
         include_domains = list(include_domain) if include_domain else None
         exclude_domains = list(exclude_domain) if exclude_domain else None
         
+        # Convert include_answer from string to appropriate type for the API
+        include_answer_param = False if include_answer == "false" else include_answer
+        
         search_results = run_search(
             query=query,
             max_results=max_results,
@@ -82,6 +97,7 @@ def search(
             include_raw=raw,
             include_domains=include_domains,
             exclude_domains=exclude_domains,
+            include_answer=include_answer_param,
         )
         
         # Only save results if they didn't come from cache
@@ -102,18 +118,15 @@ def search(
         # Show top results in the terminal
         if num_results > 0:
             click.echo("\nTop results:")
-            for i, result in enumerate(search_results.get("results", [])[:3], 1):
+            for i, result in enumerate(search_results.get("results", []), 1):
                 click.echo(f"\n{i}. {click.style(result.get('title', 'No title'), bold=True)}")
                 click.echo(f"   {click.style(result.get('url', 'No URL'), fg='blue')}")
                 if "content" in result:
                     # Truncate content for display
-                    content = result["content"]
-                    if len(content) > 200:
-                        content = content[:197] + "..."
-                    click.echo(f"   {content}")
-            
-            if num_results > 3:
-                click.echo(f"\n... and {num_results - 3} more results in the saved file.")
+                    click.echo(f"   {result['content']}")
+            # 
+            # if num_results > 3:
+            #     click.echo(f"\n... and {num_results - 3} more results in the saved file.")
                 
     except SearchError as e:
         logger.error(f"Search error: {e}")
