@@ -1,0 +1,44 @@
+[project]
+name = "web-search-client"
+version = "0.1.0"
+description = "Command-line web search client using Tavily API with result storage and management"
+readme = "README.md"
+requires-python = ">=3.12"
+license = {text = "MIT"}
+authors = [
+    {name = "Your Name", email = "your.email@example.com"}
+]
+keywords = ["search", "cli", "tavily", "web-search"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Internet :: WWW/HTTP :: Indexing/Search",
+    "Topic :: Utilities",
+]
+dependencies = [
+    "click>=8.1.8",
+    "python-dotenv>=1.1.0",
+    "tavily-python>=0.5.4",
+]
+
+[project.scripts]
+web-search = "search_client.cli:cli"
+
+[dependency-groups]
+dev = [
+    "pre-commit>=4.2.0",
+    "pytest>=8.3.5",
+    "pytest-cov>=6.1.1",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/yourusername/web-search-client"
+"Bug Tracker" = "https://github.com/yourusername/web-search-client/issues"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = "test_*.py"
